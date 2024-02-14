@@ -1,7 +1,6 @@
-function initialize(){
+var map = L.map('map').setView([51.505, -0.09],13);
 
-    var map = L.map('map').setView([51.505, -0.09],13);
-
+    // add tile layer
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -27,7 +26,7 @@ function initialize(){
     circle.bindPopup("I am a circle.");
     polygon.bindPopup("I am a polygon.");
 
-
+    // pop-up for retrieving coordinates of clicked location on map
     var popup = L.popup();
 
     function onMapClick(e) {
@@ -38,9 +37,3 @@ function initialize(){
 }
 
 map.on('click', onMapClick);
-
-
-}
-
-// call the initialize function once the DOM has loaded
-document.addEventListener('DOMContentLoaded',initialize);
