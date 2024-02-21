@@ -1,7 +1,8 @@
 /* Map of GeoJSON data from eu_country_nuclear_pct.geojson */
 //declare map var in global scope
 var map;
-//function to instantiate the Leaflet map
+
+// Create the Leaflet map
 function createMap(){
     //create the map
     map = L.map('map', {
@@ -20,7 +21,7 @@ function createMap(){
     getData();
 };
 
-// function to attach pop-ups to each mapped feature
+// Attach pop-ups to each mapped feature
 function onEachFeature(feature, layer){
     //no property named popupContent; instead, create html string with all properties
     var popupContent = "";
@@ -34,7 +35,7 @@ function onEachFeature(feature, layer){
 
 };
 
-//function to retrieve the data and place it on the map
+// Import GeoJSON data and add to map with stylized point markers
 function getData(){
     //load the data
     fetch("data/eu_country_nuclear_pct.geojson")
@@ -42,23 +43,60 @@ function getData(){
             return response.json();
         })
         .then(function(json){
-            //create marker options
-            var geojsonMarkerOptions = {
-                radius: 8,
-                fillColor: "#ff7800",
-                color: "#000",
-                weight: 1,
-                opacity: 1,
-                fillOpacity: 0.8
-            };
-            //create a Leaflet GeoJSON layer and add it to the map
-            L.geoJson(json, {
-                pointToLayer: function (feature, latlng){
-                    return L.circleMarker(latlng, geojsonMarkerOptions);
-                },
-                onEachFeature: onEachFeature
-            }).addTo(map);
+            
+            createPropSymbols(json);
         })
 };
 
+function createPropSymbols(data){
+
+    
+    //Step 4. Determine the attribute for scaling the proportional symbols
+    var attribute = "2022";
+    
+    
+    //create marker options
+    var geojsonMarkerOptions = {
+        radius: 8,
+        fillColor: "#ff7800",
+        color: "#000",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8
+    };
+    //create a Leaflet GeoJSON layer and add it to the map
+    L.geoJson(data, {
+        pointToLayer: function (feature, latlng){
+            //Step 5: For each feature, determine its value for the selected attribute
+            var attValue = Number(feature.properties[attribute]);
+
+            //examine the attribute value to check that it is correct
+            console.log(feature.properties, attValue);
+
+            //create circle markers
+            return L.circleMarker(latlng, geojsonMarkerOptions);
+            
+        },
+        onEachFeature: onEachFeature
+    }).addTo(map);
+
+
+
+
+}
+
 document.addEventListener('DOMContentLoaded',createMap)
+
+
+
+
+
+
+//GOAL: Proportional symbols representing attribute values of mapped features
+//STEPS:
+//Step 1. Create the Leaflet map--already done in createMap()
+//Step 2. Import GeoJSON data--already done in getData()
+//Step 3. Add circle markers for point features to the map--already done in AJAX callback
+//Step 4. Determine the attribute for scaling the proportional symbols
+//Step 5. For each feature, determine its value for the selected attribute
+//Step 6. Give each feature's circle marker a radius based on its attribute value
