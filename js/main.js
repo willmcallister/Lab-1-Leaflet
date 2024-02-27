@@ -71,66 +71,70 @@ function calcPropRadius(attValue) {
 };
 
 
-/*
 // Attach pop-ups to each mapped feature
-function onEachFeature(feature, layer){
-    //no property named popupContent; instead, create html string with all properties
-    var popupContent = "";
-    if (feature.properties) {
-        //loop to add feature property names and values to html string
-        for (var property in feature.properties){
-            popupContent += "<p>" + property + ": " + feature.properties[property] + "</p>";
-        }
-        layer.bindPopup(popupContent);
-    };
-
-};
-*/
-
-
-function createPropSymbols(data){
-
+function pointToLayer(feature, latlng){
     
     //Step 4. Determine the attribute for scaling the proportional symbols
     var attribute = "1990";
-    
-    
+
+
     //create marker options
-    var geojsonMarkerOptions = {
+    var options = {
         radius: 8,
-        fillColor: "#ff7800",
+        //fillColor: "#ff7800",
         color: "#fff",
         weight: 1,
         opacity: 1,
         fillOpacity: 0.8
     };
     
+    // Step 5: For each feature, determine its value for the selected attribute,
+    // also recolor based on null, 0, or valid data
+    var attValue;
+    if(feature.properties[attribute] === null) {
+        attValue = null;
+        options.fillColor = "gray"; // if value is null, set marker to gray
+    }
+    else {
+        attValue = Number(feature.properties[attribute]);
+
+        if(attValue === 0) {
+            options.fillColor = "#4872b5";
+        }
+        else {
+            options.fillColor = "orange";
+        }
+    }
+
+    //Step 6: Give each feature's circle marker a radius based on its attribute value
+    options.radius = calcPropRadius(attValue);
+
+    //create circle marker layer
+    var layer = L.circleMarker(latlng, options);
+    
+    
+
+
+
+    // --- make pop-ups ---
+    
+    // in pop-up, include country name and percentage for that year
+    var popupContent = "<p><b>Country:</b>" + feature.properties.Country + "</p><p><b>" + attribute + ":<b> " + feature.properties[attribute] + "</p>";
+    
+    //bind the pop-up to the circle marker 
+    layer.bindPopup(popupContent);
+
+    return layer;
+
+};
+
+
+
+function createPropSymbols(data){
     
     //create a Leaflet GeoJSON layer and add it to the map
     L.geoJson(data, {
-        pointToLayer: function (feature, latlng){
-            //Step 5: For each feature, determine its value for the selected attribute
-            var attValue;
-            if(feature.properties[attribute] === null) {
-                attValue = null;
-                geojsonMarkerOptions.fillColor = "gray"; // if value is null, set marker to gray
-            }
-            else {
-                attValue = Number(feature.properties[attribute]);
-                if(attValue === 0) {
-                    geojsonMarkerOptions.fillColor = "#4872b5";
-                }
-                else {
-                    geojsonMarkerOptions.fillColor = "orange";
-                }
-            }
-
-            //Step 6: Give each feature's circle marker a radius based on its attribute value
-            geojsonMarkerOptions.radius = calcPropRadius(attValue);
-
-            //create circle markers
-            return L.circleMarker(latlng, geojsonMarkerOptions);
-        }
+        pointToLayer: pointToLayer
     }).addTo(map);
 
 
