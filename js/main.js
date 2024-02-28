@@ -119,10 +119,12 @@ function pointToLayer(feature, latlng){
     // --- make pop-ups ---
     
     // in pop-up, include country name and percentage for that year
-    var popupContent = "<p><b>Country:</b>" + feature.properties.Country + "</p><p><b>" + attribute + ":<b> " + feature.properties[attribute] + "</p>";
+    var popupContent = "<p><b>Country: </b>" + feature.properties.Country + "</p><p><b>" + attribute + ":</b> " + feature.properties[attribute] + "%</p>";
     
     //bind the pop-up to the circle marker 
-    layer.bindPopup(popupContent);
+    layer.bindPopup(popupContent, {
+        offset: new L.Point(0,-options.radius)
+    });
 
     return layer;
 
@@ -155,6 +157,7 @@ function getData(){
         .then(function(json){
             
             createPropSymbols(json);
+            createSequenceControls();
         })
 };
 
@@ -168,3 +171,43 @@ function getData(){
 //Step 4. Determine the attribute for scaling the proportional symbols
 //Step 5. For each feature, determine its value for the selected attribute
 //Step 6. Give each feature's circle marker a radius based on its attribute value
+
+
+//GOAL: Allow the user to sequence through the attributes and resymbolize the map 
+//   according to each attribute
+//STEPS:
+
+//Step 1. Create slider widget
+function createSequenceControls(){
+    //create range input element (slider)
+    var slider = "<input class='range-slider' type='range'></input>";
+    document.querySelector("#panel").insertAdjacentHTML('beforeend',slider);
+
+    //set slider attributes
+    document.querySelector(".range-slider").max = 6;
+    document.querySelector(".range-slider").min = 0;
+    document.querySelector(".range-slider").value = 0;
+    document.querySelector(".range-slider").step = 1;
+
+    //Step 2. Create step buttons
+    // adding step buttons to the slider
+    document.querySelector('#panel').insertAdjacentHTML('beforeend','<button class="step" id="reverse">Reverse</button>');
+    document.querySelector('#panel').insertAdjacentHTML('beforeend','<button class="step" id="forward">Forward</button>');
+
+    //replace button content with images
+    document.querySelector('#reverse').insertAdjacentHTML('beforeend',"<img src='img/reverse.png'>")
+    document.querySelector('#forward').insertAdjacentHTML('beforeend',"<img src='img/forward.png'>")
+};
+
+
+
+//Step 3. Create an array of the sequential attributes to keep track of their order
+//Step 4. Assign the current attribute based on the index of the attributes array
+//Step 5. Listen for user input via affordances
+//Step 6. For a forward step through the sequence, increment the attributes array index; 
+//   for a reverse step, decrement the attributes array index
+//Step 7. At either end of the sequence, return to the opposite end of the sequence on the next step
+//   (wrap around)
+//Step 8. Update the slider position based on the new index
+//Step 9. Reassign the current attribute based on the new attributes array index
+//Step 10. Resize proportional symbols according to each feature's value for the new attribute
