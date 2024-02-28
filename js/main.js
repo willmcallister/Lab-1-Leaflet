@@ -63,8 +63,7 @@ function calcPropRadius(attValue) {
         var minRadius = 5;
         
         //Flannery Appearance Compensation formula
-        var radius = 1.0083 * Math.pow(attValue/minValue,0.5715) * minRadius
-        console.log(radius);
+        var radius = 1.0083 * Math.pow(attValue/minValue,0.5715) * minRadius;
     }
 
     return radius;
@@ -72,10 +71,10 @@ function calcPropRadius(attValue) {
 
 
 // Attach pop-ups to each mapped feature
-function pointToLayer(feature, latlng){
+function pointToLayer(feature, latlng, attributes){
     
     //Step 4. Determine the attribute for scaling the proportional symbols
-    var attribute = "1990";
+    var attribute = attributes[0];
 
 
     //create marker options
@@ -119,7 +118,8 @@ function pointToLayer(feature, latlng){
     // --- make pop-ups ---
     
     // in pop-up, include country name and percentage for that year
-    var popupContent = "<p><b>Country: </b>" + feature.properties.Country + "</p><p><b>" + attribute + ":</b> " + feature.properties[attribute] + "%</p>";
+    var popupContent = "<p><b>Country: </b>" + feature.properties.Country + "</p><p><b>" 
+    + "Percent in " + attribute.split("_")[1] + ":</b> " + feature.properties[attribute] + "%</p>";
     
     //bind the pop-up to the circle marker 
     layer.bindPopup(popupContent, {
@@ -132,11 +132,13 @@ function pointToLayer(feature, latlng){
 
 
 
-function createPropSymbols(data){
+function createPropSymbols(data, attributes){
     
     //create a Leaflet GeoJSON layer and add it to the map
     L.geoJson(data, {
-        pointToLayer: pointToLayer
+        pointToLayer: function(feature,latlng){
+            return pointToLayer(feature,latlng, attributes);
+        }
     }).addTo(map);
 
 
@@ -155,54 +157,81 @@ function getData(){
             return response.json();
         })
         .then(function(json){
-            
-            createPropSymbols(json);
-            createSequenceControls();
+            var attributes = processData(json);
+            createPropSymbols(json, attributes);
+            createSequenceControls(attributes);
         })
 };
 
 
-
-//GOAL: Proportional symbols representing attribute values of mapped features
-//STEPS:
-//Step 1. Create the Leaflet map--already done in createMap()
-//Step 2. Import GeoJSON data--already done in getData()
-//Step 3. Add circle markers for point features to the map--already done in AJAX callback
-//Step 4. Determine the attribute for scaling the proportional symbols
-//Step 5. For each feature, determine its value for the selected attribute
-//Step 6. Give each feature's circle marker a radius based on its attribute value
-
-
-//GOAL: Allow the user to sequence through the attributes and resymbolize the map 
-//   according to each attribute
-//STEPS:
-
-//Step 1. Create slider widget
-function createSequenceControls(){
+// Create slider widget
+function createSequenceControls(attributes){
     //create range input element (slider)
     var slider = "<input class='range-slider' type='range'></input>";
     document.querySelector("#panel").insertAdjacentHTML('beforeend',slider);
 
+    console.log(attributes);
+
+    // storing min and max values of slider for readability and to use for listeners
+    var sliderMin = attributes[0].split("_")[1]
+    var sliderMax = attributes[attributes.length-1].split("_")[1];
+
     //set slider attributes
-    document.querySelector(".range-slider").max = 6;
-    document.querySelector(".range-slider").min = 0;
-    document.querySelector(".range-slider").value = 0;
+    document.querySelector(".range-slider").max = sliderMax;
+    document.querySelector(".range-slider").min = sliderMin;
+    document.querySelector(".range-slider").value = sliderMin;
     document.querySelector(".range-slider").step = 1;
 
     //Step 2. Create step buttons
-    // adding step buttons to the slider
-    document.querySelector('#panel').insertAdjacentHTML('beforeend','<button class="step" id="reverse">Reverse</button>');
-    document.querySelector('#panel').insertAdjacentHTML('beforeend','<button class="step" id="forward">Forward</button>');
+    // adding step buttons to the slider with images
+    document.querySelector('#panel').insertAdjacentHTML('beforeend','<button class="step" id="reverse"></button>');
+    document.querySelector('#panel').insertAdjacentHTML('beforeend','<button class="step" id="forward"></button>');
 
     //replace button content with images
     document.querySelector('#reverse').insertAdjacentHTML('beforeend',"<img src='img/reverse.png'>")
     document.querySelector('#forward').insertAdjacentHTML('beforeend',"<img src='img/forward.png'>")
+
+
+    // Create listeners for slider bar and buttons
+
+    // click forward/reverse buttons
+    document.querySelectorAll('.step').forEach(function(step){
+        step.addEventListener("click", function(){
+            // still need to implement
+        })
+    })
+
+    // slide slider
+    document.querySelector('.range-slider').addEventListener('input', function(){
+        var index = this.value;
+        console.log(index);
+    })
 };
 
 
 
-//Step 3. Create an array of the sequential attributes to keep track of their order
-//Step 4. Assign the current attribute based on the index of the attributes array
+// Create an array of the attributes to keep track of their order (for the slider)
+function processData(data){
+    //empty array to hold attributes
+    var attributes = [];
+
+    //properties of the first feature in the dataset
+    var properties = data.features[0].properties;
+
+    //push each attribute name into attributes array
+    for (var attribute in properties){
+        //only take attributes with population values
+        if (attribute.indexOf("pct") > -1){
+            attributes.push(attribute);
+        };
+    };
+
+
+    return attributes;
+};
+
+
+
 //Step 5. Listen for user input via affordances
 //Step 6. For a forward step through the sequence, increment the attributes array index; 
 //   for a reverse step, decrement the attributes array index
