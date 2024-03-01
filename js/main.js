@@ -1,3 +1,5 @@
+// STILL NEED TO IMPLEMENT A THRESHOLD FOR SCALING, RIGHT NOW SOME SYMBOLS GET WAY TOO SMALL
+
 /* Map of GeoJSON data from eu_country_nuclear_pct.geojson */
 //declare map var in global scope
 var map;
@@ -51,7 +53,7 @@ function calcPropRadius(attValue) {
         minValue = 5;
     }
     
-    if(attValue === null) {
+    if(attValue === -1) {
         return 5;
     }
     else if(attValue === 0){
@@ -80,7 +82,6 @@ function pointToLayer(feature, latlng, attributes){
     //create marker options
     var options = {
         radius: 8,
-        //fillColor: "#ff7800",
         color: "#fff",
         weight: 1,
         opacity: 1,
@@ -89,14 +90,11 @@ function pointToLayer(feature, latlng, attributes){
     
     // Step 5: For each feature, determine its value for the selected attribute,
     // also recolor based on null, 0, or valid data
-    var attValue;
-    if(feature.properties[attribute] === null) {
-        attValue = null;
+    var attValue = Number(feature.properties[attribute]);
+    if(attValue === -1) {
         options.fillColor = "gray"; // if value is null, set marker to gray
     }
     else {
-        attValue = Number(feature.properties[attribute]);
-
         if(attValue === 0) {
             options.fillColor = "#4872b5";
         }
@@ -118,8 +116,17 @@ function pointToLayer(feature, latlng, attributes){
     // --- make pop-ups ---
     
     // in pop-up, include country name and percentage for that year
-    var popupContent = "<p><b>Country: </b>" + feature.properties.Country + "</p><p><b>" 
-    + "Percent in " + attribute.split("_")[1] + ":</b> " + feature.properties[attribute] + "%</p>";
+    var popupContent = "<p><b>Country: </b>" + feature.properties.Country + "</p>"
+    
+    // handling attribute data of -1 (no data)
+    if(feature.properties[attribute] === -1){
+        popupContent += "<p><b>" + "Percent in " + attribute.split("_")[1] 
+        + ":</b> " + "No data <b>:(</b>" + "</p>";
+    }else {
+        popupContent += "<p><b>" + "Percent in " + attribute.split("_")[1] 
+        + ":</b> " + feature.properties[attribute] + "%</p>";
+    }
+    
     
     //bind the pop-up to the circle marker 
     layer.bindPopup(popupContent, {
@@ -152,7 +159,7 @@ document.addEventListener('DOMContentLoaded',createMap)
 // Import GeoJSON data and add to map with stylized point markers
 function getData(){
     //load the data
-    fetch("data/eu_country_nuclear_pct.geojson")
+    fetch("data/eu_country_nuclear_pct_no_nulls.geojson")
         .then(function(response){
             return response.json();
         })
@@ -166,11 +173,10 @@ function getData(){
 
 // Create slider widget
 function createSequenceControls(attributes){
+    
     //create range input element (slider)
     var slider = "<input class='range-slider' type='range'></input>";
     document.querySelector("#panel").insertAdjacentHTML('beforeend',slider);
-
-    console.log(attributes);
 
     // storing min and max values of slider for readability and to use for listeners
     var sliderMin = attributes[0].split("_")[1]
@@ -192,22 +198,91 @@ function createSequenceControls(attributes){
     document.querySelector('#forward').insertAdjacentHTML('beforeend',"<img src='img/forward.png'>")
 
 
-    // Create listeners for slider bar and buttons
+    // Step 5: Create listeners for slider bar and buttons
 
     // click forward/reverse buttons
     document.querySelectorAll('.step').forEach(function(step){
         step.addEventListener("click", function(){
-            // still need to implement
+            var index = document.querySelector('.range-slider').value;
+
+             //Step 6: increment or decrement depending on button clicked
+            if (step.id == 'forward'){
+                index++;
+                //Step 7: if past the last attribute, wrap around to first attribute
+                index = index > sliderMax ? sliderMin : index;
+            } else if (step.id == 'reverse'){
+                index--;
+                //Step 7: if past the first attribute, wrap around to last attribute
+                index = index < sliderMin ? sliderMax : index;
+            };
+
+            //Step 8: update slider
+            document.querySelector('.range-slider').value = index;
+            //console.log(index);
+
+            //Step 9: pass new attribute to update symbols
+            updatePropSymbols("pct_" + index);
+
         })
     })
 
     // slide slider
     document.querySelector('.range-slider').addEventListener('input', function(){
+        //var index = "pct_" + this.value;
         var index = this.value;
-        console.log(index);
+
+        //Step 9: pass new attribute to update symbols
+        updatePropSymbols("pct_" + index);
     })
 };
 
+
+//Step 10: Resize proportional symbols according to new attribute values
+function updatePropSymbols(attribute){
+
+    map.eachLayer(function(layer){
+
+        if(layer.feature && layer.feature.properties[attribute]){
+
+            //access feature properties
+            var props = layer.feature.properties;
+
+            //update each feature's radius based on new attribute values
+            var radius = calcPropRadius(props[attribute]);
+            layer.setRadius(radius);
+
+            // update feature color based on attribute data
+            switch(props[attribute]) {
+                case -1:
+                    layer.setStyle({fillColor: 'gray'});
+                    break;
+                case 0:
+                    layer.setStyle({fillColor: '#4872b5'});
+                    break;
+                default:
+                    layer.setStyle({fillColor: 'orange'});
+            }
+
+            // in pop-up, include country name and percentage for that year
+            var popupContent = "<p><b>Country: </b>" + props.Country + "</p>"
+
+            // handling attribute data of -1 (no data)
+            if(props[attribute] === -1){
+                popupContent += "<p><b>" + "Percent in " + attribute.split("_")[1] 
+                + ":</b> " + "No data <b>:(</b>" + "</p>";
+            }else {
+                popupContent += "<p><b>" + "Percent in " + attribute.split("_")[1] 
+                + ":</b> " + props[attribute] + "%</p>";
+            }
+
+
+            //update popup content            
+            popup = layer.getPopup();            
+            popup.setContent(popupContent).update();
+        }
+
+    });
+};
 
 
 // Create an array of the attributes to keep track of their order (for the slider)
@@ -232,7 +307,6 @@ function processData(data){
 
 
 
-//Step 5. Listen for user input via affordances
 //Step 6. For a forward step through the sequence, increment the attributes array index; 
 //   for a reverse step, decrement the attributes array index
 //Step 7. At either end of the sequence, return to the opposite end of the sequence on the next step
