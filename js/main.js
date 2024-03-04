@@ -6,6 +6,24 @@ var map;
 var minValue = 1;
 
 
+// PopupContent constructor function
+function PopupContent(properties, attribute){
+    this.properties = properties;
+    this.attribute = attribute;
+    this.year = attribute.split("_")[1];
+
+    // handling attribute data of -1 (no data)
+    if(properties[attribute] === -1){
+        this.percentage = "No data <b>:(</b>";
+    }else {
+        this.percentage = properties[attribute];
+    }
+
+    this.formatted = "<p><b>Country: </b>" + this.properties.Country + "</p><p><b>Percent in " 
+    + this.year + ":</b> " + this.percentage + "%</p>";
+}
+
+
 // Create the Leaflet map
 function createMap(){
     
@@ -111,25 +129,12 @@ function pointToLayer(feature, latlng, attributes){
     
     
 
-
-
-    // --- make pop-ups ---
-    
-    // in pop-up, include country name and percentage for that year
-    var popupContent = "<p><b>Country: </b>" + feature.properties.Country + "</p>"
-    
-    // handling attribute data of -1 (no data)
-    if(feature.properties[attribute] === -1){
-        popupContent += "<p><b>" + "Percent in " + attribute.split("_")[1] 
-        + ":</b> " + "No data <b>:(</b>" + "</p>";
-    }else {
-        popupContent += "<p><b>" + "Percent in " + attribute.split("_")[1] 
-        + ":</b> " + feature.properties[attribute] + "%</p>";
-    }
+    // create popup content
+    var popupContent = new PopupContent(feature.properties, attribute);
     
     
     //bind the pop-up to the circle marker 
-    layer.bindPopup(popupContent, {
+    layer.bindPopup(popupContent.formatted, {
         offset: new L.Point(0,-options.radius)
     });
 
@@ -263,22 +268,14 @@ function updatePropSymbols(attribute){
                     layer.setStyle({fillColor: 'orange'});
             }
 
-            // in pop-up, include country name and percentage for that year
-            var popupContent = "<p><b>Country: </b>" + props.Country + "</p>"
-
-            // handling attribute data of -1 (no data)
-            if(props[attribute] === -1){
-                popupContent += "<p><b>" + "Percent in " + attribute.split("_")[1] 
-                + ":</b> " + "No data <b>:(</b>" + "</p>";
-            }else {
-                popupContent += "<p><b>" + "Percent in " + attribute.split("_")[1] 
-                + ":</b> " + props[attribute] + "%</p>";
-            }
+            
+            // create popup content
+            var popupContent = new PopupContent(props, attribute);
 
 
             //update popup content            
             popup = layer.getPopup();            
-            popup.setContent(popupContent).update();
+            popup.setContent(popupContent.formatted).update();
         }
 
     });
