@@ -49,11 +49,11 @@ function calcMinValue(data){
     //create empty array to store all data values
     var allValues = [];
     //loop through each city
-    for(var city of data.features){
+    for(var country of data.features){
         //loop through each year
         for(var year = 1990; year <= 2020; year+=5){
               //get population for current year
-              var value = city.properties[year];
+              var value = country.properties[year];
               //add value to array
               allValues.push(value);
         }
@@ -105,28 +105,28 @@ function pointToLayer(feature, latlng, attributes){
         opacity: 1,
         fillOpacity: 0.8
     };
+
     
     // Step 5: For each feature, determine its value for the selected attribute,
     // also recolor based on null, 0, or valid data
     var attValue = Number(feature.properties[attribute]);
-    if(attValue === -1) {
-        options.fillColor = "gray"; // if value is null, set marker to gray
-    }
-    else {
-        if(attValue === 0) {
+    switch(attValue) {
+        case -1:
+            options.fillColor = "gray";
+            break;
+        case 0:
             options.fillColor = "#4872b5";
-        }
-        else {
+            break;
+        default:
             options.fillColor = "orange";
-        }
     }
+
 
     //Step 6: Give each feature's circle marker a radius based on its attribute value
     options.radius = calcPropRadius(attValue);
 
     //create circle marker layer
     var layer = L.circleMarker(latlng, options);
-    
     
 
     // create popup content
@@ -143,22 +143,14 @@ function pointToLayer(feature, latlng, attributes){
 };
 
 
-
 function createPropSymbols(data, attributes){
-    
     //create a Leaflet GeoJSON layer and add it to the map
     L.geoJson(data, {
         pointToLayer: function(feature,latlng){
             return pointToLayer(feature,latlng, attributes);
         }
     }).addTo(map);
-
-
-
-
 }
-
-document.addEventListener('DOMContentLoaded',createMap)
 
 
 // Import GeoJSON data and add to map with stylized point markers
@@ -175,7 +167,7 @@ function getData(){
         })
 };
 
-
+/*
 // Create slider widget
 function createSequenceControls(attributes){
     
@@ -240,9 +232,10 @@ function createSequenceControls(attributes){
         updatePropSymbols("pct_" + index);
     })
 };
+*/
 
 
-//Step 10: Resize proportional symbols according to new attribute values
+// Resize, recolor, and set pop-ups for proportional symbols according to new attribute values
 function updatePropSymbols(attribute){
 
     map.eachLayer(function(layer){
@@ -253,8 +246,7 @@ function updatePropSymbols(attribute){
             var props = layer.feature.properties;
 
             //update each feature's radius based on new attribute values
-            var radius = calcPropRadius(props[attribute]);
-            layer.setRadius(radius);
+            layer.setRadius(calcPropRadius(props[attribute]));
 
             // update feature color based on attribute data
             switch(props[attribute]) {
@@ -303,11 +295,31 @@ function processData(data){
 };
 
 
+//Create new sequence controls
+function createSequenceControls(attributes){   
+    var SequenceControl = L.Control.extend({
+        options: {
+            position: 'bottomleft'
+        },
 
-//Step 6. For a forward step through the sequence, increment the attributes array index; 
-//   for a reverse step, decrement the attributes array index
-//Step 7. At either end of the sequence, return to the opposite end of the sequence on the next step
-//   (wrap around)
-//Step 8. Update the slider position based on the new index
-//Step 9. Reassign the current attribute based on the new attributes array index
-//Step 10. Resize proportional symbols according to each feature's value for the new attribute
+        onAdd: function () {
+            // create the control container div with a particular class name
+            var container = L.DomUtil.create('div', 'sequence-control-container');
+
+
+
+            //add skip buttons
+            container.insertAdjacentHTML('beforeend', '<button class="step" id="reverse" title="Reverse"><img src="img/reverse.png"></button>'); 
+            container.insertAdjacentHTML('beforeend', '<button class="step" id="forward" title="Forward"><img src="img/forward.png"></button>');
+            
+            //create range input element (slider)
+            container.insertAdjacentHTML('beforeend', '<input class="range-slider" type="range">')
+
+            return container;
+        }
+    });
+
+    map.addControl(new SequenceControl());    // add listeners after adding control}
+}
+
+document.addEventListener('DOMContentLoaded',createMap);
