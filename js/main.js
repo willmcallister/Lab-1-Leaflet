@@ -1,9 +1,14 @@
-// STILL NEED TO IMPLEMENT A THRESHOLD FOR SCALING, RIGHT NOW SOME SYMBOLS GET WAY TOO SMALL
+/* Map of GeoJSON data from eu_country_nuclear_pct_no_nulls.geojson */
 
-/* Map of GeoJSON data from eu_country_nuclear_pct.geojson */
-//declare map var in global scope
 var map;
-var minValue = 1;
+
+// setting an arbitrary minimum value because of -1 and 0 in dataset, a threshold
+// for prop symbols is being used anyway, so this is just for scaling purposes
+var minValue = 3;
+var threshold = 5;
+var dataStats = {};  
+//constant factor adjusts symbol sizes evenly
+var minRadius = 5;
 
 
 // PopupContent constructor function
@@ -11,16 +16,22 @@ function PopupContent(properties, attribute){
     this.properties = properties;
     this.attribute = attribute;
     this.year = attribute.split("_")[1];
+    this.country = this.properties.Country;
+
+    //used to print % if data is a number, nothing if it's no data
+    var printPct = '%';
 
     // handling attribute data of -1 (no data)
     if(properties[attribute] === -1){
         this.percentage = "No data <b>:(</b>";
+        printPct = '';
     }else {
         this.percentage = properties[attribute];
+        printPct = '%';
     }
 
     this.formatted = "<p><b>Country: </b>" + this.properties.Country + "</p><p><b>Percent in " 
-    + this.year + ":</b> " + this.percentage + "%</p>";
+    + this.year + ":</b> " + this.percentage + printPct + "</p>";
 }
 
 
@@ -29,9 +40,14 @@ function createMap(){
     
     //create the map
     map = L.map('map', {
-        center: [20, 0],
-        zoom: 2
+        center: [52, 10],
+        zoom: 3,
+        minZoom: 3,
+        maxZoom: 6
     });
+
+    // set bounds of the map
+    map.setMaxBounds(map.getBounds());
 
     //add OSM base tilelayer
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -45,24 +61,31 @@ function createMap(){
 };
 
 
-function calcMinValue(data){
+function calcStats(data){
     //create empty array to store all data values
     var allValues = [];
     //loop through each city
     for(var country of data.features){
         //loop through each year
-        for(var year = 1990; year <= 2020; year+=5){
+        for(var year = 1965; year <= 2022; year+=1){
               //get population for current year
-              var value = country.properties[year];
+              var value = country.properties["pct_"+ String(year)];
               //add value to array
               allValues.push(value);
         }
     }
-    //get minimum value of our array
-    var minValue = Math.min(...allValues)
+    //get min, max, mean stats for our array
+    // this math works backwards from flannery appearance compensation formula and the set threshold
+    dataStats.min = Math.pow(threshold/minRadius/1.0083, 1/0.5715) * minValue;
 
-    return minValue;
-}
+    dataStats.max = Math.max(...allValues);
+
+    //may need to revisit and throw out 0s and -1s!!!!
+    //calculate meanValue
+    var sum = allValues.reduce(function(a, b){return a+b;});
+    dataStats.mean = sum/ allValues.length;
+
+}    
 
 
 //calculate the radius of each proportional symbol
@@ -72,18 +95,20 @@ function calcPropRadius(attValue) {
     }
     
     if(attValue === -1) {
-        return 5;
+        return threshold;
     }
     else if(attValue === 0){
-        return 5;
+        return threshold;
     }
     else {
-
-        //constant factor adjusts symbol sizes evenly
-        var minRadius = 5;
         
         //Flannery Appearance Compensation formula
         var radius = 1.0083 * Math.pow(attValue/minValue,0.5715) * minRadius;
+
+        //setting minimum threshold for prop symbols of 5
+        if(radius < 5){
+            radius = threshold;
+        }
     }
 
     return radius;
@@ -118,7 +143,7 @@ function pointToLayer(feature, latlng, attributes){
             options.fillColor = "#4872b5";
             break;
         default:
-            options.fillColor = "orange";
+            options.fillColor = "gold";
     }
 
 
@@ -162,77 +187,12 @@ function getData(){
         })
         .then(function(json){
             var attributes = processData(json);
+            calcStats(json);
             createPropSymbols(json, attributes);
             createSequenceControls(attributes);
+            createLegend(attributes);
         })
 };
-
-/*
-// Create slider widget
-function createSequenceControls(attributes){
-    
-    //create range input element (slider)
-    var slider = "<input class='range-slider' type='range'></input>";
-    document.querySelector("#panel").insertAdjacentHTML('beforeend',slider);
-
-    // storing min and max values of slider for readability and to use for listeners
-    var sliderMin = attributes[0].split("_")[1]
-    var sliderMax = attributes[attributes.length-1].split("_")[1];
-
-    //set slider attributes
-    document.querySelector(".range-slider").max = sliderMax;
-    document.querySelector(".range-slider").min = sliderMin;
-    document.querySelector(".range-slider").value = sliderMin;
-    document.querySelector(".range-slider").step = 1;
-
-    //Step 2. Create step buttons
-    // adding step buttons to the slider with images
-    document.querySelector('#panel').insertAdjacentHTML('beforeend','<button class="step" id="reverse"></button>');
-    document.querySelector('#panel').insertAdjacentHTML('beforeend','<button class="step" id="forward"></button>');
-
-    //replace button content with images
-    document.querySelector('#reverse').insertAdjacentHTML('beforeend',"<img src='img/reverse.png'>")
-    document.querySelector('#forward').insertAdjacentHTML('beforeend',"<img src='img/forward.png'>")
-
-
-    // Step 5: Create listeners for slider bar and buttons
-
-    // click forward/reverse buttons
-    document.querySelectorAll('.step').forEach(function(step){
-        step.addEventListener("click", function(){
-            var index = document.querySelector('.range-slider').value;
-
-             //Step 6: increment or decrement depending on button clicked
-            if (step.id == 'forward'){
-                index++;
-                //Step 7: if past the last attribute, wrap around to first attribute
-                index = index > sliderMax ? sliderMin : index;
-            } else if (step.id == 'reverse'){
-                index--;
-                //Step 7: if past the first attribute, wrap around to last attribute
-                index = index < sliderMin ? sliderMax : index;
-            };
-
-            //Step 8: update slider
-            document.querySelector('.range-slider').value = index;
-            //console.log(index);
-
-            //Step 9: pass new attribute to update symbols
-            updatePropSymbols("pct_" + index);
-
-        })
-    })
-
-    // slide slider
-    document.querySelector('.range-slider').addEventListener('input', function(){
-        //var index = "pct_" + this.value;
-        var index = this.value;
-
-        //Step 9: pass new attribute to update symbols
-        updatePropSymbols("pct_" + index);
-    })
-};
-*/
 
 
 // Resize, recolor, and set pop-ups for proportional symbols according to new attribute values
@@ -240,12 +200,17 @@ function updatePropSymbols(attribute){
 
     map.eachLayer(function(layer){
 
-        if(layer.feature && layer.feature.properties[attribute]){
+        if(layer.feature){
+
+            console.log(layer.feature.properties[attribute]);
 
             //access feature properties
             var props = layer.feature.properties;
+            //console.log("var props " + layer.feature.properties.Country);
+
 
             //update each feature's radius based on new attribute values
+            //console.log("changing radius")
             layer.setRadius(calcPropRadius(props[attribute]));
 
             // update feature color based on attribute data
@@ -257,7 +222,7 @@ function updatePropSymbols(attribute){
                     layer.setStyle({fillColor: '#4872b5'});
                     break;
                 default:
-                    layer.setStyle({fillColor: 'orange'});
+                    layer.setStyle({fillColor: 'gold'});
             }
 
             
@@ -268,6 +233,13 @@ function updatePropSymbols(attribute){
             //update popup content            
             popup = layer.getPopup();            
             popup.setContent(popupContent.formatted).update();
+
+            /*
+            console.log("Year: " + popupContent.year + " Country: " 
+            + popupContent.country + " Percentage: " + this.percentage);
+            */
+
+            //console.log(popupContent.formatted);
         }
 
     });
@@ -305,21 +277,143 @@ function createSequenceControls(attributes){
         onAdd: function () {
             // create the control container div with a particular class name
             var container = L.DomUtil.create('div', 'sequence-control-container');
-
-
-
+            
             //add skip buttons
-            container.insertAdjacentHTML('beforeend', '<button class="step" id="reverse" title="Reverse"><img src="img/reverse.png"></button>'); 
-            container.insertAdjacentHTML('beforeend', '<button class="step" id="forward" title="Forward"><img src="img/forward.png"></button>');
+            container.insertAdjacentHTML('beforeend', 
+            '<button class="step" id="reverse" title="Reverse"><img src="img/reverse.png"></button>'); 
+            container.insertAdjacentHTML('beforeend', 
+            '<button class="step" id="forward" title="Forward"><img src="img/forward.png"></button>');
             
             //create range input element (slider)
             container.insertAdjacentHTML('beforeend', '<input class="range-slider" type="range">')
+
+            //disable any mouse event listeners for the container
+            L.DomEvent.disableClickPropagation(container);
 
             return container;
         }
     });
 
     map.addControl(new SequenceControl());    // add listeners after adding control}
+
+
+
+    // storing min and max values of slider for readability and to use for listeners
+    var sliderMin = attributes[0].split("_")[1]
+    var sliderMax = attributes[attributes.length-1].split("_")[1];
+
+    //set slider attributes
+    document.querySelector(".range-slider").max = sliderMax;
+    document.querySelector(".range-slider").min = sliderMin;
+    document.querySelector(".range-slider").value = sliderMin;
+    document.querySelector(".range-slider").step = 1;
+
+
+    // Create listeners for slider bar and buttons
+
+    // click forward/reverse buttons
+    document.querySelectorAll('.step').forEach(function(step){
+        step.addEventListener("click", function(){
+            var index = document.querySelector('.range-slider').value;
+
+            //increment or decrement depending on button clicked
+            if (step.id == 'forward'){
+                index++;
+                // if past the last attribute, wrap around to first attribute
+                index = index > sliderMax ? sliderMin : index;
+            } else if (step.id == 'reverse'){
+                index--;
+                // if past the first attribute, wrap around to last attribute
+                index = index < sliderMin ? sliderMax : index;
+            };
+
+            // update slider
+            document.querySelector('.range-slider').value = index;
+
+            // update prop symbols with new index value
+            updatePropSymbols("pct_" + index);
+
+            //update temporal legend
+            document.querySelector("span.year").innerHTML = index;
+        })
+    })
+
+    // slide slider
+    document.querySelector('.range-slider').addEventListener('input', function(){
+        var index = this.value;
+
+        // update prop symbols with new index value
+        updatePropSymbols("pct_" + index);
+
+        //update temporal legend
+        document.querySelector("span.year").innerHTML = index;
+    })
+
 }
+
+
+function createLegend(attributes){
+    var LegendControl = L.Control.extend({
+        options: {
+            position: 'bottomright'
+        },
+
+        onAdd: function () {
+            // create the control container with a particular class name
+            var container = L.DomUtil.create('div', 'legend-control-container');
+
+            //PUT YOUR SCRIPT TO CREATE THE TEMPORAL LEGEND HERE
+            var year = attributes[0].split("_")[1];
+            container.innerHTML = '<p class="temporalLegend">Nuclear Energy Production Percentage in <span class="year">' + year + '</span></p>';
+            
+            console.log("ran once");
+
+            // Add an <svg> element to the legend
+
+            var svg = '<svg id="attribute-legend" width="160px" height="60px">';
+
+             //array of circle names to base loop on
+            var circles = ["max", "mean", "min"];
+
+            // add each circle and text to svg string
+            for (var i=0; i<circles.length; i++){
+                
+                //Step 3: assign the r and cy attributes  
+                var radius = calcPropRadius(dataStats[circles[i]]);  
+                var cy = 59 - radius;
+                
+                //circle string  
+                svg += '<circle class="legend-circle" id="' + circles[i] + '" r="' 
+                + radius + '"cy="' + cy 
+                + '" fill="gold" fill-opacity="0.8" stroke="#000000" cx="30"/>';
+            };
+
+            // close svg string
+            svg += "</svg>";
+
+            // add attribute legend svg to container
+            container.insertAdjacentHTML('beforeend',svg);
+
+
+            // add attribute legend svg to container
+            container.innerHTML += svg;
+
+
+            // Step 2. Add a `<circle>` element for each of three attribute values: min, max, and mean
+            // Step 3. Assign each `<circle>` element a center and radius based on the dataset min, max, and mean values of all attributes
+            // Step 4. Create legend text to label each circle
+
+
+
+
+
+
+            return container;
+        }
+    });
+
+    map.addControl(new LegendControl());
+};
+
 
 document.addEventListener('DOMContentLoaded',createMap);
