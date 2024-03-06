@@ -64,16 +64,28 @@ function createMap(){
 function calcStats(data){
     //create empty array to store all data values
     var allValues = [];
+    var allValuesFiltered = []; // all data values that are not -1 or 0
+
     //loop through each city
     for(var country of data.features){
         //loop through each year
         for(var year = 1965; year <= 2022; year+=1){
-              //get population for current year
-              var value = country.properties["pct_"+ String(year)];
-              //add value to array
-              allValues.push(value);
+            //get population for current year
+            var value = country.properties["pct_"+ String(year)];
+            //add value to array
+            allValues.push(value);
+
+
+            if(value != 0 && value != -1){
+                allValuesFiltered.push(value);
+            }
+            
         }
     }
+
+    //console.log(allValues);
+    console.log(allValuesFiltered);
+
     //get min, max, mean stats for our array
     // this math works backwards from flannery appearance compensation formula and the set threshold
     dataStats.min = Math.pow(threshold/minRadius/1.0083, 1/0.5715) * minValue;
@@ -82,8 +94,8 @@ function calcStats(data){
 
     //may need to revisit and throw out 0s and -1s!!!!
     //calculate meanValue
-    var sum = allValues.reduce(function(a, b){return a+b;});
-    dataStats.mean = sum/ allValues.length;
+    var sum = allValuesFiltered.reduce(function(a, b){return a+b;});
+    dataStats.mean = sum/ allValuesFiltered.length;
 
 }    
 
@@ -366,37 +378,54 @@ function createLegend(attributes){
             var year = attributes[0].split("_")[1];
             container.innerHTML = '<p class="temporalLegend">Nuclear Energy Production Percentage in <span class="year">' + year + '</span></p>';
             
-            console.log("ran once");
 
             // Add an <svg> element to the legend
-
             var svg = '<svg id="attribute-legend" width="160px" height="60px">';
 
-             //array of circle names to base loop on
+            //array of circle names to base loop on
             var circles = ["max", "mean", "min"];
 
             // add each circle and text to svg string
             for (var i=0; i<circles.length; i++){
-                
-                //Step 3: assign the r and cy attributes  
+                // assign the r and cy attributes  
                 var radius = calcPropRadius(dataStats[circles[i]]);  
                 var cy = 59 - radius;
                 
-                //circle string  
+                // circle string  
                 svg += '<circle class="legend-circle" id="' + circles[i] + '" r="' 
                 + radius + '"cy="' + cy 
                 + '" fill="gold" fill-opacity="0.8" stroke="#000000" cx="30"/>';
+
+
+                //evenly space out labels            
+                var textY = i * 20 + 20;            
+
+                //text string            
+                svg += '<text id="' + circles[i] + '-text" x="65" y="' + textY + '">'
+                + Math.round(dataStats[circles[i]]*100)/100 + "%" + '</text>';
+
+
+
             };
 
             // close svg string
             svg += "</svg>";
 
+            var svg2 = '<svg id="attribute-legend-additional" width="160px" height="30px">';
+            var radius = calcPropRadius(dataStats[circles[2]]);
+            var cy = 59 - radius;
+            // add circles for '0' and 'no data'
+            svg2 += '<circle class="legend-circle" id="zero" r="' 
+                + radius + '"cy="' + cy + '" fill="blue" fill-opacity="0.8" stroke="#000000" cx="30"/></svg>';
+            
+            //text string            
+            svg += '<text id=other-text" x="65" y="20">'
+            + "Test" + '</text>';
+            
+
             // add attribute legend svg to container
             container.insertAdjacentHTML('beforeend',svg);
-
-
-            // add attribute legend svg to container
-            container.innerHTML += svg;
+            container.insertAdjacentHTML('beforeend',svg2);
 
 
             // Step 2. Add a `<circle>` element for each of three attribute values: min, max, and mean
