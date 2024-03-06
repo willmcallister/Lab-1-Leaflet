@@ -18,7 +18,7 @@ function PopupContent(properties, attribute){
     this.year = attribute.split("_")[1];
     this.country = this.properties.Country;
 
-    //used to print % if data is a number, nothing if it's no data
+    //used to print % if data is a number, nothing if it's 'no data'
     var printPct = '%';
 
     // handling attribute data of -1 (no data)
@@ -62,49 +62,37 @@ function createMap(){
 
 
 function calcStats(data){
-    //create empty array to store all data values
-    var allValues = [];
-    var allValuesFiltered = []; // all data values that are not -1 or 0
+    // array to store all data values that are not -1 or 0
+    var allValuesFiltered = []; 
 
     //loop through each city
     for(var country of data.features){
         //loop through each year
         for(var year = 1965; year <= 2022; year+=1){
-            //get population for current year
+            //get percentage for current year
             var value = country.properties["pct_"+ String(year)];
-            //add value to array
-            allValues.push(value);
-
-
+            
+            // if valid value, push to filtered array
             if(value != 0 && value != -1){
                 allValuesFiltered.push(value);
-            }
-            
+            }            
         }
     }
-
-    //console.log(allValues);
-    console.log(allValuesFiltered);
 
     //get min, max, mean stats for our array
     // this math works backwards from flannery appearance compensation formula and the set threshold
     dataStats.min = Math.pow(threshold/minRadius/1.0083, 1/0.5715) * minValue;
 
-    dataStats.max = Math.max(...allValues);
+    dataStats.max = Math.max(...allValuesFiltered);
 
-    //may need to revisit and throw out 0s and -1s!!!!
     //calculate meanValue
     var sum = allValuesFiltered.reduce(function(a, b){return a+b;});
     dataStats.mean = sum/ allValuesFiltered.length;
-
 }    
 
 
 //calculate the radius of each proportional symbol
 function calcPropRadius(attValue) {
-    if(minValue === 0){
-        minValue = 5;
-    }
     
     if(attValue === -1) {
         return threshold;
@@ -113,11 +101,10 @@ function calcPropRadius(attValue) {
         return threshold;
     }
     else {
-        
         //Flannery Appearance Compensation formula
         var radius = 1.0083 * Math.pow(attValue/minValue,0.5715) * minRadius;
 
-        //setting minimum threshold for prop symbols of 5
+        //setting minimum threshold for prop symbols w/ radius < 5
         if(radius < 5){
             radius = threshold;
         }
@@ -130,11 +117,10 @@ function calcPropRadius(attValue) {
 // Attach pop-ups to each mapped feature
 function pointToLayer(feature, latlng, attributes){
     
-    //Step 4. Determine the attribute for scaling the proportional symbols
+    // attribute for scaling the proportional symbols
     var attribute = attributes[0];
 
-
-    //create marker options
+    // create marker options
     var options = {
         radius: 8,
         color: "#fff",
@@ -143,10 +129,9 @@ function pointToLayer(feature, latlng, attributes){
         fillOpacity: 0.8
     };
 
-    
-    // Step 5: For each feature, determine its value for the selected attribute,
-    // also recolor based on null, 0, or valid data
     var attValue = Number(feature.properties[attribute]);
+
+    // recolor prop symbols based on no data (-1), 0, or valid data
     switch(attValue) {
         case -1:
             options.fillColor = "gray";
@@ -158,25 +143,21 @@ function pointToLayer(feature, latlng, attributes){
             options.fillColor = "gold";
     }
 
-
-    //Step 6: Give each feature's circle marker a radius based on its attribute value
+    // give each feature's circle marker a radius based on its attribute value
     options.radius = calcPropRadius(attValue);
 
     //create circle marker layer
     var layer = L.circleMarker(latlng, options);
     
-
     // create popup content
     var popupContent = new PopupContent(feature.properties, attribute);
     
-    
-    //bind the pop-up to the circle marker 
+    // bind the pop-up to the circle marker 
     layer.bindPopup(popupContent.formatted, {
         offset: new L.Point(0,-options.radius)
     });
 
     return layer;
-
 };
 
 
@@ -209,20 +190,12 @@ function getData(){
 
 // Resize, recolor, and set pop-ups for proportional symbols according to new attribute values
 function updatePropSymbols(attribute){
-
     map.eachLayer(function(layer){
-
         if(layer.feature){
-
-            console.log(layer.feature.properties[attribute]);
-
-            //access feature properties
+            // access feature properties
             var props = layer.feature.properties;
-            //console.log("var props " + layer.feature.properties.Country);
 
-
-            //update each feature's radius based on new attribute values
-            //console.log("changing radius")
+            // update each feature's radius based on new attribute values
             layer.setRadius(calcPropRadius(props[attribute]));
 
             // update feature color based on attribute data
@@ -236,24 +209,14 @@ function updatePropSymbols(attribute){
                 default:
                     layer.setStyle({fillColor: 'gold'});
             }
-
             
             // create popup content
             var popupContent = new PopupContent(props, attribute);
 
-
             //update popup content            
             popup = layer.getPopup();            
             popup.setContent(popupContent.formatted).update();
-
-            /*
-            console.log("Year: " + popupContent.year + " Country: " 
-            + popupContent.country + " Percentage: " + this.percentage);
-            */
-
-            //console.log(popupContent.formatted);
         }
-
     });
 };
 
@@ -306,8 +269,7 @@ function createSequenceControls(attributes){
         }
     });
 
-    map.addControl(new SequenceControl());    // add listeners after adding control}
-
+    map.addControl(new SequenceControl());    // add listeners after adding control
 
 
     // storing min and max values of slider for readability and to use for listeners
@@ -360,7 +322,6 @@ function createSequenceControls(attributes){
         //update temporal legend
         document.querySelector("span.year").innerHTML = index;
     })
-
 }
 
 
@@ -374,13 +335,12 @@ function createLegend(attributes){
             // create the control container with a particular class name
             var container = L.DomUtil.create('div', 'legend-control-container');
 
-            //PUT YOUR SCRIPT TO CREATE THE TEMPORAL LEGEND HERE
             var year = attributes[0].split("_")[1];
-            container.innerHTML = '<p class="temporalLegend">Nuclear Energy Production Percentage in <span class="year">' + year + '</span></p>';
+            container.innerHTML = '<p class="temporalLegend"><b>Nuclear Energy Production Percentage in <span class="year">' 
+            + year + '</b></span></p>';
             
-
             // Add an <svg> element to the legend
-            var svg = '<svg id="attribute-legend" width="160px" height="60px">';
+            var svg = '<svg id="attribute-legend" width="160px" height="80px">';
 
             //array of circle names to base loop on
             var circles = ["max", "mean", "min"];
@@ -394,48 +354,35 @@ function createLegend(attributes){
                 // circle string  
                 svg += '<circle class="legend-circle" id="' + circles[i] + '" r="' 
                 + radius + '"cy="' + cy 
-                + '" fill="gold" fill-opacity="0.8" stroke="#000000" cx="30"/>';
+                + '" fill="gold" fill-opacity="0.8" stroke="#000000" cx="45"/>';
 
-
-                //evenly space out labels            
+                //evenly space labels            
                 var textY = i * 20 + 20;            
 
                 //text string            
-                svg += '<text id="' + circles[i] + '-text" x="65" y="' + textY + '">'
+                svg += '<text id="' + circles[i] + '-text" x="80" y="' + textY + '">'
                 + Math.round(dataStats[circles[i]]*100)/100 + "%" + '</text>';
-
-
-
             };
 
             // close svg string
             svg += "</svg>";
 
-            var svg2 = '<svg id="attribute-legend-additional" width="160px" height="30px">';
-            var radius = calcPropRadius(dataStats[circles[2]]);
-            var cy = 59 - radius;
             // add circles for '0' and 'no data'
-            svg2 += '<circle class="legend-circle" id="zero" r="' 
-                + radius + '"cy="' + cy + '" fill="blue" fill-opacity="0.8" stroke="#000000" cx="30"/></svg>';
-            
-            //text string            
-            svg += '<text id=other-text" x="65" y="20">'
-            + "Test" + '</text>';
-            
+            // '0%' symbol and string
+            var cy = 10;//spacing of elements
+            svg += '<svg id="attribute-legend" width="160px" height="30px"><circle class="legend-circle" id="zero" r="' 
+                + threshold + '"cy="' + cy + '" fill="#4872b5" fill-opacity="0.8" stroke="#ffffff" cx="45"/>';      
+            svg += '<text id=zero-text" x="80" y="'+ (cy+3) + '">'
+            + "0%" + '</text></svg>';
 
+            // no data symbol and string
+            svg += '<svg id="attribute-legend" width="160px" height="20px"><circle class="legend-circle" id="no-data" r="' 
+                + threshold + '"cy="' + cy + '" fill="gray" fill-opacity="0.8" stroke="#ffffff" cx="45"/>';       
+            svg += '<text id=zero-text" x="80" y="'+ (cy+3) + '">'
+            + "No Data" + '</text></svg>';
+         
             // add attribute legend svg to container
             container.insertAdjacentHTML('beforeend',svg);
-            container.insertAdjacentHTML('beforeend',svg2);
-
-
-            // Step 2. Add a `<circle>` element for each of three attribute values: min, max, and mean
-            // Step 3. Assign each `<circle>` element a center and radius based on the dataset min, max, and mean values of all attributes
-            // Step 4. Create legend text to label each circle
-
-
-
-
-
 
             return container;
         }

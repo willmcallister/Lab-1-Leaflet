@@ -1,8 +1,21 @@
 /*Add CSS styles here*/
+body {
+    font-family: "Franklin Gothic Medium";
+    background-color: #4872b5;
+    color: white;
+    
+}
+
+#credits{
+    font-family: "Tahoma";
+    font-size: small;
+}
+
 #map { 
     height: 600px;
     width: 100%;
     display: inline-block;
+    color: black;
 }
 
 .sequence-control-container {
@@ -16,7 +29,7 @@
 }
 
 .legend-control-container {
-    width: 150px;
+    width: 160px;
     height: auto;
     background-color: rgba(255,255,255,0.8);
     padding: 10px;
