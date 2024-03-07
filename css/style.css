@@ -31,7 +31,7 @@ body {
     width: 160px;
     height: auto;
     background-color: rgba(255,255,255,0.8);
-    line-height: 12px;
+    line-height: 20px;
     text-align: center;
     border: solid gray 1px;
 }
@@ -39,6 +39,7 @@ body {
 .temporal-legend {
     width: auto;
     margin: 5px;
+    font-size: medium;
 }
 
 .range-slider {  
