@@ -40,7 +40,7 @@ function createMap(){
     
     //create the map
     map = L.map('map', {
-        center: [52, 10],
+        center: [52, 7],
         zoom: 3,
         minZoom: 3,
         maxZoom: 6
@@ -336,11 +336,11 @@ function createLegend(attributes){
             var container = L.DomUtil.create('div', 'legend-control-container');
 
             var year = attributes[0].split("_")[1];
-            container.innerHTML = '<p class="temporalLegend"><b>Nuclear Energy Production Percentage in <span class="year">' 
+            container.innerHTML = '<p class="temporal-legend"><b>Nuclear Energy Production in <span class="year">' 
             + year + '</b></span></p>';
             
             // Add an <svg> element to the legend
-            var svg = '<svg id="attribute-legend" width="160px" height="80px">';
+            var svg = '<svg id="attribute-legend" width="160px" height="60px">';
 
             //array of circle names to base loop on
             var circles = ["max", "mean", "min"];
@@ -371,14 +371,14 @@ function createLegend(attributes){
             // '0%' symbol and string
             var cy = 10;//spacing of elements
             svg += '<svg id="attribute-legend" width="160px" height="30px"><circle class="legend-circle" id="zero" r="' 
-                + threshold + '"cy="' + cy + '" fill="#4872b5" fill-opacity="0.8" stroke="#ffffff" cx="45"/>';      
-            svg += '<text id=zero-text" x="80" y="'+ (cy+3) + '">'
+                + threshold + '"cy="' + (cy+10) + '" fill="#4872b5" fill-opacity="0.8" stroke="#ffffff" cx="45"/>';      
+            svg += '<text id=zero-text" x="65" y="'+ (cy+14) + '">'
             + "0%" + '</text></svg>';
 
             // no data symbol and string
             svg += '<svg id="attribute-legend" width="160px" height="20px"><circle class="legend-circle" id="no-data" r="' 
                 + threshold + '"cy="' + cy + '" fill="gray" fill-opacity="0.8" stroke="#ffffff" cx="45"/>';       
-            svg += '<text id=zero-text" x="80" y="'+ (cy+3) + '">'
+            svg += '<text id=zero-text" x="65" y="'+ (cy+4) + '">'
             + "No Data" + '</text></svg>';
          
             // add attribute legend svg to container
