@@ -37,7 +37,6 @@ function PopupContent(properties, attribute){
 
 // Create the Leaflet map
 function createMap(){
-    
     //create the map
     map = L.map('map', {
         center: [52, 7],
@@ -48,7 +47,7 @@ function createMap(){
 
     // set bounds of the map
     map.setMaxBounds(map.getBounds());
-
+    
     //add OSM base tilelayer
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -161,30 +160,28 @@ function pointToLayer(feature, latlng, attributes){
 };
 
 
-function createPropSymbols(data, attributes){
+function createPropSymbols(data, attr){
     //create a Leaflet GeoJSON layer and add it to the map
     L.geoJson(data, {
         pointToLayer: function(feature,latlng){
-            return pointToLayer(feature,latlng, attributes);
+            return pointToLayer(feature,latlng, attr);
         }
     }).addTo(map);
 }
 
 
-// Import GeoJSON data and add to map with stylized point markers
-function getData(){
-    //load the data
-    fetch("data/eu_country_nuclear_pct_no_nulls.geojson")
-        .then(function(response){
+// Load data asyncronously and convert to json
+async function getData(){
+    await fetch("data/eu_country_nuclear_pct_no_nulls.geojson")
+        .then((response) => {
             return response.json();
-        })
-        .then(function(json){
+        }).then((json) => {
             var attributes = processData(json);
             calcStats(json);
             createPropSymbols(json, attributes);
             createSequenceControls(attributes);
             createLegend(attributes);
-        })
+        });
 };
 
 
