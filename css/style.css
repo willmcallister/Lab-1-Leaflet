@@ -1,8 +1,39 @@
 /*Add CSS styles here*/
-body {
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+
+html,
+body{
     font-family: "Franklin Gothic Medium";
     background-color: #4872b5;
     color: white;
+}
+
+.title,
+.subtitle{
+    padding-left: 20px;
+    margin:0;
+    padding-top:12px;
+    padding-bottom: 12px;
+}
+
+header {
+    height: 110px;
+}
+
+.footer {
+    height: 30px;
+    
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding-bottom: 14px; /*workaround for now centering was pissing me off*/
+    
 }
 
 #credits{
@@ -11,9 +42,11 @@ body {
 }
 
 #map { 
-    height: 600px;
+    height: calc(100vh - 140px);
     width: 100%;
-    display: inline-block;
+    padding: 0;
+    margin: 0;
+    display: flex;
     color: black;
 }
 
@@ -91,3 +124,28 @@ color: #D1D1D1;
 
 /* fixing leaflet zoom button colors */
 .leaflet-bar > a:link { color: black; }
+
+
+/* max 320px */
+@media (max-width: 20rem) {
+    
+}
+
+/* max 480px */
+@media (max-width: 30rem) {
+    h1 {
+        font-size: 1.5rem;
+    }
+    .title {
+        padding-left: 0px;
+    }
+    .subtitle{display: none; }
+
+    /* center title on mobile */
+    .title {
+        text-align: center;
+    }
+    header {
+        height: 50px;
+    }
+}
